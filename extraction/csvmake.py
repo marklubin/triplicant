@@ -1,5 +1,5 @@
-f = open('flickrdata.txt','r')
-out = open('latlong.csv','w')
+f = open('partial.txt','r')
+out = open('platlong.csv','w')
 out.write("lat,long\n")
 for line in f.readlines():
 	fields = line.split(',')
