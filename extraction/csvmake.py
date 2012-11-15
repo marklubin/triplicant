@@ -1,4 +1,4 @@
-f = open('partial.txt','r')
+f = open('flickrdataV2FINAL.txt','r')
 out = open('platlong.csv','w')
 out.write("lat,long\n")
 for line in f.readlines():

@@ -19,18 +19,20 @@ m.drawcountries(linewidth=.05)
 #m.drawparallels(np.arange(-90.,91.,30.))
 #m.drawmeridians(np.arange(-180.,181.,60.))
 #m.drawmapboundary(fill_color='black')
-plt.title("Photo Distribution")
 
+photoCnt = 0
 f = open("platlong.csv","r")#input file
 f.readline()#skip first line
 points = []
 for line in f.readlines():
+	photoCnt += 1
 	lat,lon = [float(x) for x in line.split(',')]#extract coords
 	points.append(tuple(m(lon,lat)))
 x,y = zip(*points)
 #plt.plot(x,y)
+plt.title("Photo Distribution for %d Flickr Photos" % photoCnt)
 plt.scatter(x,y,s= .1,marker='.',c='red',edgecolors='none')
-plt.savefig("superdetailed.png",dpi = 4000)
+plt.savefig("rawDistribution.png",dpi = 4000)
 
 	
 	
