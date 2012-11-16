@@ -1,0 +1,21 @@
+<!doctype html>
+<script type=text/javascript 
+  src="{{url_for('static', filename='jquery.js') }}">
+    $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+</script>
+<script type=text/javascript src="{{
+url_for('static', filename='triplicant.js') }}">
+</script>
+
+<title>Have a nice trip with Triplicant</title>
+
+<div id = "Header">
+  <h1>Triplicant - data mined travel route reccomender</h1>
+</div>
+
+<div id ="entry">
+  <form method="POST"  action="{{url_for('trip')}}">
+    From: <input type=text name=start />
+    To: <input type =text name=end />
+    <a href=# >Route my trip</a>
+  </form>
