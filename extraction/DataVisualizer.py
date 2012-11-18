@@ -18,7 +18,7 @@ class DataVisualizer:
     def rawMapMake(self,renderdpi,filename,msize):
         cn = 0
         start = time()
-        
+
         #initialize connection to database
         try:
             cn = sqlite3.connect(DATABASE)
