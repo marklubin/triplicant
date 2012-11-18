@@ -1,0 +1,4 @@
+"""
+FlickrExtractor.py : A class with methods for dealing with data from the Flickr
+API and processing data.
+"""
