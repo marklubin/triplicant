@@ -5,8 +5,9 @@ Mark Lubin
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 import matplotlib.pyplot as plt
-import sqlite3
+import psycopg2
 from time import time
+import secret
 
 DATABASE = "triplicant.db"
 
@@ -21,11 +22,11 @@ class DataVisualizer:
 
         #initialize connection to database
         try:
-            cn = sqlite3.connect(DATABASE)
-        except Exceptions as e:
+            cn = psycopg2.connect(secret.DB_CONNECT)
+        except Exception as e:
             print "Error:", e
             return
-
+        cr = cn.cursor()
         #get map ready to go
         fig = plt.figure(figsize=(8,4),dpi = renderdpi)
         fig.add_subplot(1,1,1)
@@ -37,7 +38,9 @@ class DataVisualizer:
         s = "SELECT latitude,longitude from photos;"
         photoCnt = 0
         points = []
-        for row in cn.execute(s):
+
+        cr.execute(s)
+        for row in cr.fetchall():
             x,y = m(row[1],row[0])#convert to merc projection coords
             points.append((x,y))
             photoCnt += 1
