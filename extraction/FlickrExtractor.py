@@ -5,6 +5,7 @@ API and processing data.
 import psycopg2
 import secret
 import numpy as np
+import json
 from sklearn.cluster import MeanShift, estimate_bandwidth
 from sklearn.datasets.samples_generator import make_blobs
 
@@ -69,7 +70,7 @@ class FlickrExtractor:
             cr.execute("INSERT INTO locations(location_id,latitude,longitude)\
                         VALUES ((%s),(%s),(%s));"\
                         ,(k,cluster_centers[k][0],cluster_centers[k][1]))
-        #update join table
+            #update join table
             for pair in zip(locs_np[my_members,0],locs_np[my_members,1]):
                 cr.execute("INSERT INTO locationsPhotos(location_id,photo_id)\
                            VALUES ((%s),(%s));",\
@@ -80,14 +81,53 @@ class FlickrExtractor:
 
 
     """compute each user path and the markov model probabilities, store in db"""
-    def computeUserTripsAndProbablities(self):
-        pass
+    def computeOwnerJourneys(self):
+       cn = psycopg2.connect(secret.DB_CONNECT);
+       print "DATABASE CONNECTED"
+       cr = cn.cursor()
+
+       #rebuild Users Table
+       cr.execute("DROP TABLE IF EXISTS owners;")
+
+       cr.execute("CREATE TABLE owners (\
+                   owner_id SERIAL PRIMARY KEY,\
+                   flickr_id VARCHAR(50),\
+                   journey  VARCHAR(1000));")
+
+       #get all the owners
+       cr.execute("SELECT DISTINCT owner FROM photos;")
+       ownerCnt = 0
+
+       for owner in cr.fetchall():
+           ownerCnt += 1
+           if not ownerCnt % 50: print ownerCnt
+           #get all this owners photos order by date
+           cr.execute("SELECT photos.photo_id,photos.datetime,\
+                       locationsPhotos.location_id FROM photos,\
+                       locationsPhotos WHERE photos.owner = (%s)\
+                       AND photos.photo_id = locationsPhotos.photo_id\
+                       ORDER BY photos.datetime ASC;",owner)
+           currentLoc = -1
+           trip = []
+           for photo in cr.fetchall():
+               #compute the journey
+              if photo[2] != currentLoc:#found somewhere new
+                  trip.append(photo[2])
+                  currentLoc = photo[2]
+                  #just pass over photos that stay in currentLoc
+
+           if(len(trip) > 1):#this owner saw more than one location
+                cr.execute("INSERT INTO owners(flickr_id,journey)\
+                            VALUES (%s,%s);",(owner[0],json.dumps(trip)))
+       cn.commit()
+       cn.close()
 
     """compute the importance vector"""
     def solve():
-        passx
+        pass
 
 
 if __name__ == '__main__':
     flickr = FlickrExtractor()
-    flickr.locationMake(.5,100)
+    flickr.computeOwnerJourneys()
+    #flickr.locationMake(.5,100)
