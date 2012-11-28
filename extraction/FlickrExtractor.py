@@ -33,7 +33,8 @@ class FlickrExtractor:
                     location_id INTEGER PRIMARY KEY,\
                     latitude FLOAT,\
                     longitude FLOAT,\
-                    placename VARCHAR(100));")
+                    placename VARCHAR(100),\
+                    importance FLOAT);")
 
         cr.execute("CREATE TABLE locationsPhotos(\
                     lp_id SERIAL PRIMARY KEY,\
@@ -64,10 +65,12 @@ class FlickrExtractor:
 
         #import pdb; pdb.set_trace()
 
+        nCls = 0
         for k in range(0,n_clusters-1):
             my_members = labels == k
             #insert the new location
             if len(locs_np[my_members,0]) < noise: continue
+            nCls += 1
             cr.execute("INSERT INTO locations(location_id,latitude,longitude)\
                         VALUES ((%s),(%s),(%s));"\
                         ,(k,cluster_centers[k][0],cluster_centers[k][1]))
@@ -76,6 +79,7 @@ class FlickrExtractor:
                 cr.execute("INSERT INTO locationsPhotos(location_id,photo_id)\
                            VALUES ((%s),(%s));",\
                            (k,photo_ids[str(pair[0]) + str(pair[1])]))
+        print "%d usable clusters recorded" % nCls
         cn.commit()
         cn.close()
 
@@ -158,7 +162,7 @@ class FlickrExtractor:
            cr.execute("INSERT INTO owners(flickr_id,journey) VALUES (%s,%s);",(owner[0],json.dumps(trip)))
 
 
-       #TODO maybe normalize probablites to remove people who never leave there current location
+       #TODO maybe normalize probablites to remove people who never leave their current location
        print "Recording probablities"
        for source in N:
            for destination in N[source]:
@@ -178,10 +182,18 @@ class FlickrExtractor:
         cr = cn.cursor()
         g = Geocoder.Geocoder()
 
-        cr.execute("SELECT latitude,longitude FROM locations")
+        cr.execute("SELECT latitude,longitude,location_id FROM locations")
 
         for latlong in cr.fetchall():
-            print g.reverse(latlong)
+            placename = g.reverse(latlong[0:2])
+            print placename,latlong[2]
+            if len(placename) > 100: placename = placename[0:99]
+            cr.execute("UPDATE locations\
+                        SET placename = (%s)\
+                        WHERE location_id = (%s);",\
+                        (placename,latlong[2]))
+        cn.commit()
+        cn.close()
 
 
     """compute the importance vector"""
@@ -217,7 +229,6 @@ class FlickrExtractor:
         delta = 9999
         while delta > .0001:
             I1 = {}#new vector to work with
-            if iterCnt == 100:break
             for location in I.keys():
                 #add in reward factor
                 I1[location] = R[location]
@@ -244,11 +255,11 @@ class FlickrExtractor:
 if __name__ == '__main__':
     #main routine for data processing and visualization
     flickr = FlickrExtractor()
-    dv = DataVisualizer.DataVisualizer()
-    flickr.locationMake(1,100)
-    #flickr.getLocationNames()
-    flickr.computeOwnerJourneys()
-    flickr.solve()
-    dv.mapMake(300,"photos",.1)
-    dv.mapMake(300,"locations",10)
-    dv.ownerTripsMapMake(300,'trips',.01)
+    #dv = DataVisualizer.DataVisualizer()
+    #flickr.locationMake(1,160)
+    #dv.mapMake(300,"locations",10)
+    flickr.getLocationNames()
+    #flickr.computeOwnerJourneys()
+    #flickr.solve()
+    #dv.mapMake(300,"photos",.1)
+    #dv.ownerTripsMapMake(300,'trips',.01)
