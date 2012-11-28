@@ -100,6 +100,6 @@ if __name__ == '__main__':
     #TODO allow command line arguments to produce maps on fly
     dv = DataVisualizer()
     #dv.mapMake(1000,"locations",2)
-    #  dv.mapMake(300,"photos",.1)
+    dv.mapMake(300,"photos",.1)
     dv.mapMake(300,"locations",10)
-    # dv.ownerTripsMapMake(300,'trips',.01)
+    dv.ownerTripsMapMake(300,'trips',.01)

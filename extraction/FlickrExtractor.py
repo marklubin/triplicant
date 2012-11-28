@@ -8,6 +8,7 @@ import numpy as np
 import json
 from sklearn.cluster import MeanShift, estimate_bandwidth
 from sklearn.datasets.samples_generator import make_blobs
+import DataVisualizer
 
 class FlickrExtractor:
     def __init__(self):
@@ -93,11 +94,45 @@ class FlickrExtractor:
                    owner_id SERIAL PRIMARY KEY,\
                    flickr_id VARCHAR(50),\
                    journey  VARCHAR(1000));")
+       #rebuilt probablities
+       cr.execute("DROP TABLE IF EXISTS probablities")
+
+       cr.execute("CREATE TABLE probablities(\
+                   prob_id SERIAL PRIMARY KEY,\
+                   source_id INTEGER,\
+                   dest_id   INTEGER,\
+                   prob FLOAT,\
+                   num INTEGER);")#stores N(l_i|l_j)
+      #get locations and total photos
+       cr.execute("SELECT location_id from LOCATIONS")
+
+       print "Getting locations list."
+
+       T = {} #record total number of times a place is visted
+       locations = []# list of locations
+
+       for loc_id in cr.fetchall():
+           T[loc_id[0]] = 0
+           locations.append(loc_id[0])
+
+       print "Initalizing Probablities"
+       #build entry to probablities table
+       N = {} #N[source][destination] = number of times we go from source to dest
+       for source in locations:
+           N[source] = {}
+           for destination in locations:
+               N[source][destination] = 0.
+               cr.execute("INSERT INTO probablities(source_id, dest_id,prob,num)\
+                           VALUES (%s,%s,%s,%s)",(source,destination,0.0,0))
+
 
        #get all the owners
        cr.execute("SELECT DISTINCT owner FROM photos;")
        ownerCnt = 0
 
+       print "Sequencing owner's trips and computing probablities"
+
+       dCnt = 0
        for owner in cr.fetchall():
            ownerCnt += 1
            if not ownerCnt % 50: print ownerCnt
@@ -112,22 +147,108 @@ class FlickrExtractor:
            for photo in cr.fetchall():
                #compute the journey
               if photo[2] != currentLoc:#found somewhere new
+                  T[photo[2]] += 1 #increment number of times this location is visted
                   trip.append(photo[2])
+                  #if this isn't the first photo we must record the trip transition
+                  if currentLoc != -1: N[currentLoc][photo[2]] += 1 #increment pseudoprob
                   currentLoc = photo[2]
-                  #just pass over photos that stay in currentLoc
+              #just pass over photos that stay in currentLoc
 
-           if(len(trip) > 1):#this owner saw more than one location
-                cr.execute("INSERT INTO owners(flickr_id,journey)\
-                            VALUES (%s,%s);",(owner[0],json.dumps(trip)))
+
+           cr.execute("INSERT INTO owners(flickr_id,journey) VALUES (%s,%s);",(owner[0],json.dumps(trip)))
+
+
+       #TODO maybe normalize probablites to remove people who never leave there current location
+       print "Recording probablities"
+       for source in N:
+           for destination in N[source]:
+               if N[source][destination] != 0:
+                            cr.execute("UPDATE probablities\
+                                        SET prob = (%s), num = (%s)\
+                                        WHERE source_id = (%s) AND dest_id = (%s);",
+                                        (N[source][destination]/float(T[source]),N[source][destination],source,destination))
+
        cn.commit()
        cn.close()
 
+       """Get location names using reverse geocoder API"""
+    def getLocationNames(self):
+        import Geocoder
+        cn = psycopg2.connect(secret.DB_CONNECT);
+        cr = cn.cursor()
+        g = Geocoder.Geocoder()
+
+        cr.execute("SELECT latitude,longitude FROM locations")
+
+        for latlong in cr.fetchall():
+            print g.reverse(latlong)
+
+
     """compute the importance vector"""
-    def solve():
-        pass
+    def solve(self):
+        R = {}#reward for a given location(total number of photos)
+        P = {}#probablities
+        cn = psycopg2.connect(secret.DB_CONNECT);
+        cr = cn.cursor()
+
+        cr.execute("SELECT location_id FROM locations")
+
+        print "Initalizing dataset."
+        #load everything we will need into memory
+        locations = cr.fetchall()[:]
+        for loc in locations:
+            lid = loc[0]
+            cr.execute("SELECT count(*) FROM locationsPhotos WHERE location_id = (%s)",(lid,))
+            R[lid] = cr.fetchone()[0]
+            P[lid] = {}
+
+        print "Retrieving probablities."
+
+        cr.execute("SELECT source_id, dest_id,prob FROM probablities WHERE prob != 0.0")
+
+        for s,d,p in cr.fetchall():
+            P[s][d] = p
+
+        print "Computing Importance vector via value iteration"
+
+        I = R.copy() #intialize importance vector
+
+        iterCnt = 0
+        delta = 9999
+        while delta > .0001:
+            I1 = {}#new vector to work with
+            if iterCnt == 100:break
+            for location in I.keys():
+                #add in reward factor
+                I1[location] = R[location]
+                for edge in P[location].keys():#sum over all places we could go next
+                    I1[location] += I[edge] * P[location][edge]
+            delta = I1[0] - I[0]
+            iterCnt += 1
+            I = I1.copy()
+
+        print "Recording computed importances to database."
+
+        for location in I.keys():
+            cr.execute("UPDATE locations\
+                        SET importance = (%s)\
+                        WHERE location_id = (%s);",(I[location],location))
+        cn.commit()
+        cn.close()
+
+
+
+
 
 
 if __name__ == '__main__':
+    #main routine for data processing and visualization
     flickr = FlickrExtractor()
+    dv = DataVisualizer.DataVisualizer()
+    flickr.locationMake(1,100)
+    #flickr.getLocationNames()
     flickr.computeOwnerJourneys()
-    #flickr.locationMake(.5,100)
+    flickr.solve()
+    dv.mapMake(300,"photos",.1)
+    dv.mapMake(300,"locations",10)
+    dv.ownerTripsMapMake(300,'trips',.01)
