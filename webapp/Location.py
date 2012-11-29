@@ -16,7 +16,7 @@ class Locations:#collection of Location
         cr.execute("SELECT location_id, latitude, longitude, placename, importance FROM Locations")
 
         for lid,lat,lon,name,imp in cr.fetchall():
-            self._locations[lid] = Location(lid,(lat,lon),name,imp)
+            self._locations[lid] = Location(lid,(float(lat),float(lon)),name,float(imp))
 
     def __iter__(self):
         for lid in self._locations:
@@ -35,15 +35,29 @@ class Locations:#collection of Location
         return locs
 
 
-    def placenameForLocation(lid):
+    def successorsForLocation(self,lid):
+        successors = self._locations.keys()[:]
+        successors.remove(lid)
+        return successors
+        if not lid in self._locations.keys():
+            raise LocatiionError("No location for ID: %d" % lid)
+        return self._locations[lid].getSuccessors()
+
+    def placenameForLocation(self,lid):
         if not lid in self._locations.keys():
             raise LocatiionError("No location for ID: %d" % lid)
         return self._locations[lid].getPlacename()
 
-    def coordsForLocation(lid):
+    def coordsForLocation(self,lid):
         if not lid in self._locations.keys():
             raise LocatiionError("No location for ID: %d" % lid)
         return self._locations[lid].getLatLong()
+
+    def importanceForLocation(self,lid):
+        if not lid in self._locations.keys():
+            raise LocatiionError("No location for ID: %d" % lid)
+        return self._locations[lid].getImportance()
+
 
 
 
@@ -60,6 +74,8 @@ class Location:
     def getLatLong(self): return self._latlong
 
     def getPlacename(self): return self._placename
+
+    def getImportance(self): return self._importance
 
     def getSuccessors(self):
         if not self._successors:#load up the list on the fly if we need it
