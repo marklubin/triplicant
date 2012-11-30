@@ -36,9 +36,9 @@ class Locations:#collection of Location
 
 
     def successorsForLocation(self,lid):
-        successors = self._locations.keys()[:]
-        successors.remove(lid)
-        return successors
+        #successors = self._locations.keys()[:]
+        #successors.remove(lid)
+        #return successors
         if not lid in self._locations.keys():
             raise LocatiionError("No location for ID: %d" % lid)
         return self._locations[lid].getSuccessors()
@@ -81,7 +81,7 @@ class Location:
         if not self._successors:#load up the list on the fly if we need it
             cn = psycopg2.connect(secret.DB_CONNECT)
             cr = cn.cursor()
-            cr.execute("SELECT dest_id FROM probablities WHERE source_id = (%s) AND prob > 0.0",(self._loc_id,))
+            cr.execute("SELECT dest_id FROM edges WHERE source_id = (%s) AND prob > 0.0",(self._loc_id,))
             [self._successors.append(row[0]) for row in cr.fetchall()]
         return self._successors
 

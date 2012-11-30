@@ -5,8 +5,12 @@ Mark Lubin
 from Location import Locations
 import Queue
 from math import acos,sin,cos,radians
+from datetime import timedelta
 
 RADIUS = 6368 #radius of earth in kilometers
+TRAVEL_RATE = .02682 #km/s = 60 mph
+DAY = timedelta(days = 1).total_seconds()
+MAX_TIME_IN_LOCATION = timedelta(days = 5).total_seconds()
 
 class Search:
     def __init__(self):
@@ -19,46 +23,68 @@ class Search:
     def getSearchLocations(self):#return a dict with location information, so the client can give us endpoints
         return self._locations.getLocations()
 
-    def computePath(self,l1,l2,h = lambda x:0): #A* search
-        h = lambda x: .4 * self.greatCircleDistance(x,l2)
+    def computePath(self,l1,l2,travelTime,h = lambda x:0): #A* search
+        print travelTime
+        h = lambda x: self.pathCost(x,l2)[1]
         openSet = Queue.PriorityQueue()
         closedSet =  []
-        openSet.put((0,Node(l1,0)))
+        i = self._locations.importanceForLocation(l1)
+        openSet.put((0,Node(l1,0,0,i,0)))
         goalNode = 0
 
 
-        while True:#while this isn't the destination
+        while not openSet.empty():#while this isn't the destination
             curr = openSet.get()[1]
             loc = curr.nid
             cost = curr.cost
-            if loc == l2:#goal reached record this not so we can find path
-                goalNode = curr
-                break
+            if loc == l2:#goal reached record this node so we can find path
+                print curr.time
+                if goalNode and curr.time > travelTime:#we return the last possible path that is under the time limite
+                    break
+                else:
+                    goalNode = curr
+                    print "Goal reachable with score %f in %f" % (goalNode.score,goalNode.time)
             if loc not in closedSet:
                 closedSet.append(loc)
                 for successor in self._locations.successorsForLocation(loc):
-                    c = self.pathCost(loc,successor) + cost + h(successor)
-                    node = Node(successor,c,curr)
+                    importance = self._locations.importanceForLocation(successor)
+                    c ,time = self.pathCost(loc,successor)
+                    score = importance + curr.score 
+                    time += curr.time 
+                    weight = c + + cost +  h(successor)
+                    node = Node(successor,c,curr,score,time)
                     openSet.put((c,node))
 
         #unweave the path
         path = []
         node  = goalNode
 
-
-        #import pdb; pdb.set_trace()
-
+        nodes = []
         while node:
             path.append(node.nid)
+            nodes.append(node)
             node  = node.parent
 
+        nodes.reverse()
+
+        for node in nodes:
+            print "To %s in %f seconds with score %f" % (self._locations.placenameForLocation(node.nid),node.time,node.score)
         path.reverse()
         return path
 
 
     def pathCost(self,l1,l2):
         d = self.greatCircleDistance(l1,l2)
-        return -1. * self._locations.importanceForLocation(l2)/(d)
+
+        time = d / TRAVEL_RATE #how long it would take going 60mph direct, a poor measure but a start
+        time = min(time,DAY)#if the travel time is more than a day we assume we can fly in a day
+        discount = 0
+        if time:
+            discount = self._locations.importanceForLocation(l2)/time
+
+        cost = time - discount
+
+        return (cost,time)
 
     def greatCircleDistance(self,l1,l2):#great circle distance in km
         c1 = [radians(c) for c in self._locations.coordsForLocation(l1)]
@@ -71,6 +97,9 @@ class Search:
 
         #print self._locations.importanceForLocation(l2)
         return RADIUS * dAngle
+
+    def timeForImportance(self,location_id):pass
+
 
 
 def cliTest():#basic command line interface for debugging
@@ -87,7 +116,7 @@ def cliTest():#basic command line interface for debugging
     for location in locations:
         cnt += 1
         #TODO make print nicer
-        print "%3d : %-75s\t\t" % (locations[location]["id"],locations[location]["name"]),
+        print "%3d : %-20s\t\t" % (locations[location]["id"],locations[location]["name"]),
         if not cnt % 2: print ''
     print "\n"
 
@@ -113,18 +142,23 @@ def cliTest():#basic command line interface for debugging
             start = int(start)
             break
 
+    ttime = input("Enter travel time in days: ")
+    ttime = float(ttime)
+    dt = timedelta(days = ttime).total_seconds()
     print "Computing a path from location: %d to location: %d" % (start,end)
-    path = s.computePath(start,end)
+    path = s.computePath(start,end,dt)
 
     for lid in path:
         print s._locations.placenameForLocation(lid)
 
 class Node:
 
-    def __init__(self,nid,cost,parent=0):
+    def __init__(self,nid,cost,parent=0,score=0,time=0):
         self.nid = nid
         self.cost = cost
         self.parent = parent
+        self.score = score
+        self.time = time
 
 
 
