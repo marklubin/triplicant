@@ -7,7 +7,8 @@ POPULATION_SIZE = 50
 RADIUS = 6368 #radius of earth in kilometers
 
 import Location,random
-from math import acos,sin,cos,radians
+from math import acos,sin,cos,radians,ceil
+import time
 
 class OrienteeringProblem:
   
@@ -29,13 +30,16 @@ class OrienteeringProblem:
       cnt += 1
       self.population.sort(reverse = True)
       self.queen = self.population[0]
-      self.cull()
-      self.mutate()
+      self.mates = self.cull()
+      self.population = self.mutate(self.mates)
     return self.queen
     
-  def cull(self):pass
+  def cull(self):
+    #for now just keep the top half, to be changed to a better method later
+    return self.population[1:int(ceil(POPULATION_SIZE/2.0))]
     
-  def mutate(self):pass
+  def mutate(self,mates):#mate with the queen to create a new generation
+    pass
 
       
     
@@ -46,66 +50,74 @@ class OrienteeringProblem:
     return population
     
   def construct_random_tour(self):
-    head = Node(self.start,0,0,0,self.locations.coordsForLocation(self.start))
-    node = head
+    Node(self.start,0,self.locations.coordsForLocation(self.start))
+    t = Tour()
+    t.append(Node(self.start,0,self.locations.coordsForLocation(self.start)))
     random.shuffle(self.vertices)
     for lid in self.vertices:
-      node.next = Node(lid,node,0,self.locations.importanceForLocation(lid),
-      self.locations.coordsForLocation(lid))
-      node = node.next
-    node.next = Node(self.end,0,0,0,self.locations.coordsForLocation(self.end))
-    return  self.make_feasible(Tour(head))
+      t.append(Node(lid,self.locations.importanceForLocation(lid),
+      self.locations.coordsForLocation(lid)))
+    t.append(Node(self.end,0,self.locations.coordsForLocation(self.end)))
+    return  self.make_feasible(t)
     
   def make_feasible(self,t):
-    node = t.head.next
-    while t.get_cost() > self.max_cost and node:
-      toDelete = node
-      node = node.next
-      t.removeNode(toDelete.location_id)
+    nodes = t.getRemoveable()
+    while t.get_cost() > self.max_cost and nodes:
+      toDelete = random.choice(nodes)
+      nodes.remove(toDelete)
+      t.removeNodeWithLocationId(toDelete)
     return t
       
       
 class Tour:#a genetic "chromeosome", a path connecting start and end
-  def __init__(self,head):
-    self.head = head
+  def __init__(self):
+    self.nodes = []
     self.total_score = 0
     self.cost = 0
     
-  def removeNode(self,location_id):
-    node = self.head
-    while node and node.location_id != location_id:
-      node = node.next
-    if not node: return
-    node.next.prev = node.prev
-    node.prev.next = node.next
+  def append(self,node):
+    self.nodes.append(node)
+    
+  def next(self,node):
+    return self.nodes.index(node) + 1
+    
+  def prev(self,node):
+    return self.nodes.index(node) - 1
+  
+  def getRemoveable(self):
+    return [node.location_id for node in self.nodes[1:len(self.nodes)-1]]
+    
+  def indexForLocationId(self,location_id):
+    for n in self.nodes:
+      if n.location_id == location_id: return self.nodes.index(n)
+    
+  def removeNodeWithLocationId(self,location_id):
+    i= self.indexForLocationId(location_id)
     if self.cost: 
-      self.cost -= self.greatCircleDistance(node.prev.coords,node.coords)
-      self.cost -= self.greatCircleDistance(node.coords,node.next.coords)
-      self.cost += self.greatCircleDistance(node.prev.coords,node.next.coords)
-    if self.total_score: self.total_score -= node.score
-    del node
-    return 
+      self.cost -= self.greatCircleDistance(self.nodes[i].coords,self.nodes[i+1].coords)
+      self.cost -= self.greatCircleDistance(self.nodes[i-1].coords,self.nodes[i].coords)
+      self.cost += self.greatCircleDistance(self.nodes[i-1].coords,self.nodes[i+1].coords)
+    if self.total_score: self.total_score -= self.nodes[i].score
+    self.nodes.remove(self.nodes[i])
+    return
   
   def get_cost(self):
     if not self.cost:
-      node = self.head
-      while node.next:
-        self.cost += self.greatCircleDistance(node.coords,node.next.coords)
-        node = node.next
+     i = 0
+     while i+1 in range(0,len(self.nodes)):
+       self.cost += self.greatCircleDistance(self.nodes[i].coords,self.nodes[i+1].coords)
+       i += 1
     return self.cost
-
     
   def get_total_score(self):
     if not self.total_score:
-      node = self.head
-      while node:
-        self.total_score += node.score
-        node = node.next
+      self.total_score = sum([node.score for node in self.nodes])
     return self.total_score
     
     
   def greatCircleDistance(self,c1,c2):#great circle distance in km
-    #TODO fix distance
+    c1 = [radians(c) for c in c1]
+    c2 = [radians(c) for c in c2]
     dLong = abs(c1[1] - c2[1]) #difference in longitude
 
     dAngle = acos(sin(c1[0]) * sin(c2[0])
@@ -116,37 +128,39 @@ class Tour:#a genetic "chromeosome", a path connecting start and end
     #print "DISTANCE in KM: %f" % d
     return d
     
+  def __setitem__(self,index,value):
+    self.nodes[index] = value
+    
+  def __getitem__(self,index):
+    return self.nodes[index]
+    
   def __cmp__(self,other):
-    #import pdb; pdb.set_trace()
     if self.get_total_score() < other.get_total_score(): return -1
     elif self.get_total_score() == other.get_total_score(): return 0
     elif self.get_total_score() > other.get_total_score(): return 1
     
     
   def __str__(self):
-    node = self.head
     string = ''
-    while node:
-      string += "%d-" % node.location_id
-      node = node.next
+    string += str([node.location_id for node in self.nodes])
     string += "\t COST: %f SCORE: %f" % (self.get_cost(),self.get_total_score())
     string += '\n'
     return string
     
 
 class Node:#a node in the graph 
-    def __init__(self,location_id,prev,next,score,coords):
+    def __init__(self,location_id,score,coords):
       self.location_id = location_id
-      self.prev = prev
-      self.next = next
       self.score = score
       self.coords = coords
       
       
 def main():
   l = Location.Locations()
-  op = OrienteeringProblem(l,0,100,55000)
+  start = time.clock()
+  op = OrienteeringProblem(l,0,100,4000)
   print op.computePath(1)
+  print "Calcuated in %f seconds." % (time.clock() - start)
 
   
 
