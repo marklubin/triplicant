@@ -12,6 +12,7 @@ TRAVEL_RATE = .02682 #km/s = 60 mph
 DAY = timedelta(days = 1).total_seconds()
 MAX_TIME_IN_LOCATION = timedelta(days = 5).total_seconds()
 
+
 class Search:
     def __init__(self):
         self._locations = Locations()#intialize collection of locations
@@ -49,8 +50,8 @@ class Search:
                 for successor in self._locations.successorsForLocation(loc):
                     importance = self._locations.importanceForLocation(successor)
                     c ,time = self.pathCost(loc,successor)
-                    score = importance + curr.score 
-                    time += curr.time 
+                    score = importance + curr.score
+                    time += curr.time
                     weight = c + + cost +  h(successor)
                     node = Node(successor,c,curr,score,time)
                     openSet.put((c,node))
@@ -78,13 +79,7 @@ class Search:
 
         time = d / TRAVEL_RATE #how long it would take going 60mph direct, a poor measure but a start
         time = min(time,DAY)#if the travel time is more than a day we assume we can fly in a day
-        discount = 0
-        if time:
-            discount = self._locations.importanceForLocation(l2)/time
-
-        cost = time - discount
-
-        return (cost,time)
+        return time
 
     def greatCircleDistance(self,l1,l2):#great circle distance in km
         c1 = [radians(c) for c in self._locations.coordsForLocation(l1)]
@@ -100,6 +95,26 @@ class Search:
 
     def timeForImportance(self,location_id):pass
 
+
+class Orienteering(Search):
+
+class Node:
+
+    def __init__(self,nid,cost,parent=0,score=0,time=0):
+        self.nid = nid
+        self.cost = cost
+        self.parent = parent
+        self.score = score
+        self.time = time
+
+
+
+
+
+
+
+
+        
 
 
 def cliTest():#basic command line interface for debugging
@@ -150,15 +165,6 @@ def cliTest():#basic command line interface for debugging
 
     for lid in path:
         print s._locations.placenameForLocation(lid)
-
-class Node:
-
-    def __init__(self,nid,cost,parent=0,score=0,time=0):
-        self.nid = nid
-        self.cost = cost
-        self.parent = parent
-        self.score = score
-        self.time = time
 
 
 

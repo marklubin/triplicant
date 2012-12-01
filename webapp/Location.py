@@ -10,24 +10,27 @@ class Locations:#collection of Location
     def __init__(self):
 
         #initalize a list of locations
-        self._locations = {}
+        self.locations = {}
         cn = psycopg2.connect(secret.DB_CONNECT)
         cr =  cn.cursor()
         cr.execute("SELECT location_id, latitude, longitude, placename, importance FROM Locations")
 
         for lid,lat,lon,name,imp in cr.fetchall():
-            self._locations[lid] = Location(lid,(float(lat),float(lon)),name,float(imp))
+            self.locations[lid] = Location(lid,(float(lat),float(lon)),name,float(imp))
 
     def __iter__(self):
         for lid in self._locations:
             yield self._locations[lid]
+            
+    def asIds(self):
+      return self.locations.keys()
 
 
     def getLocations(self):
         locs = {}#dictionary of location information
-        for loc in self._locations:
-            latlong = self._locations[loc].getLatLong()
-            name = self._locations[loc].getPlacename()
+        for loc in self.locations:
+            latlong = self.locations[loc].getLatLong()
+            name = self.locations[loc].getPlacename()
             locs[loc] = {"id"       : loc,
                          "latitude" : latlong[0],
                          "longitude": latlong[1],
@@ -39,24 +42,24 @@ class Locations:#collection of Location
         #successors = self._locations.keys()[:]
         #successors.remove(lid)
         #return successors
-        if not lid in self._locations.keys():
+        if not lid in self.locations.keys():
             raise LocatiionError("No location for ID: %d" % lid)
         return self._locations[lid].getSuccessors()
 
     def placenameForLocation(self,lid):
-        if not lid in self._locations.keys():
+        if not lid in self.locations.keys():
             raise LocatiionError("No location for ID: %d" % lid)
-        return self._locations[lid].getPlacename()
+        return self.locations[lid].getPlacename()
 
     def coordsForLocation(self,lid):
-        if not lid in self._locations.keys():
+        if not lid in self.locations.keys():
             raise LocatiionError("No location for ID: %d" % lid)
-        return self._locations[lid].getLatLong()
+        return self.locations[lid].getLatLong()
 
     def importanceForLocation(self,lid):
-        if not lid in self._locations.keys():
+        if not lid in self.locations.keys():
             raise LocatiionError("No location for ID: %d" % lid)
-        return self._locations[lid].getImportance()
+        return self.locations[lid].getImportance()
 
 
 
