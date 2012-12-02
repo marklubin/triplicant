@@ -13,9 +13,9 @@ from math import acos,sin,cos,radians,ceil
 class OrienteeringProblem:
   
   def __init__(self,locations,start,end,max_cost):#the problem itself
-    self.POPULATION_SIZE = 50 
+    self.POPULATION_SIZE = 100
     self.CROSSOVER_PROB = .95
-    self.MUTATION_PROB = .8
+    self.MUTATION_PROB = .85
     self.CLOSEST_NODE_PROB = .5
     
     
@@ -27,6 +27,11 @@ class OrienteeringProblem:
     self.vertices.remove(start)
     self.vertices.remove(end)
     self.queen = None
+    self.locationNodes = {}
+
+    for lid in self.locations.asIds:
+      self.locationNodes[lid] = Node(lid,self.locations.importanceForLocation(lid)
+                                ,self.locations.coordsForLocation(lid))
     
   def computePath(self,iterations):
     self.iterations = iterations
@@ -37,10 +42,8 @@ class OrienteeringProblem:
       cnt += 1
       self.population.sort(reverse = True)#get the top one
       self.queen = self.population[0]
-      self.queen.shuffle()
       mates = self.cull()#only keep the top half
       self.population = self.nextGeneration(mates)#generate the next gen
-    self.queen.shuffle()
     return self.queen
     
   def cull(self):
@@ -56,7 +59,6 @@ class OrienteeringProblem:
       if random.random() < self.CROSSOVER_PROB:#TODO make more fit mates have better chance
         newPop += self.spawn(queens_genes,self.getGenes(mate))#returns two spawns
       else:
-        mate.shuffle()#shuffle this guy
         newPop.append(mate) #otherwise this guy makes it to the next gen
     return newPop
         
@@ -68,7 +70,7 @@ class OrienteeringProblem:
 
     while i in range (0,2):#doing this twice
       spawn.append(Tour())
-      start = Node(self.start,0,self.locations.coordsForLocation(self.start))
+      start = self.locationNodes[self.start]
       spawn[i].append(start)
       current = start
       visited = [start.location_id]
@@ -101,12 +103,9 @@ class OrienteeringProblem:
                     if lid not in [n.location_id for n in spawn[i].nodes]]
         mutant = random.choice(mutants)
         index = random.choice(range(1,len(spawn[i].nodes)))
-        mNode = Node(mutant,self.locations.importanceForLocation(mutant),
-        self.locations.coordsForLocation(mutant))
+        mNode = self.locationNodes[index]
         spawn[i].insert(index,mNode)
-      
-      spawn[i].shuffle()#shuffle the newly made tour
-      self.make_feasible(spawn[i])
+        self.make_feasible(spawn[i])
       i += 1
 
     return [s for s in spawn if s]#return valid spawns
@@ -132,12 +131,11 @@ class OrienteeringProblem:
   def construct_random_tour(self):
     Node(self.start,0,self.locations.coordsForLocation(self.start))
     t = Tour()
-    t.append(Node(self.start,0,self.locations.coordsForLocation(self.start)))
+    t.append(self.locationNodes[self.start])
     random.shuffle(self.vertices)
     for lid in self.vertices:
-      t.append(Node(lid,self.locations.importanceForLocation(lid),
-      self.locations.coordsForLocation(lid)))
-    t.append(Node(self.end,0,self.locations.coordsForLocation(self.end)))
+      t.append(self.locationNodes[lid])
+    t.append(self.locationNodes[self.end])
     self.make_feasible(t)
     return t
     
@@ -148,16 +146,15 @@ class OrienteeringProblem:
       nodes.remove(toDelete)
       t.removeNodeWithLocationId(toDelete)
       
+      
 class Tour:#a genetic "chromosome", a path connecting start and end
   def __init__(self):
-    self.SHUFFLE_TIMES = 10
     self.nodes = []
     self.total_score = 0
     self.cost = 0
     
   def append(self,node):
     self.nodes.append(node)
-    self.cost = 0
     
   def insert(self,index,node):
     self.nodes.insert(index,node)
@@ -203,29 +200,7 @@ class Tour:#a genetic "chromosome", a path connecting start and end
     if not self.total_score:
       self.total_score = sum([node.score for node in self.nodes])
     return self.total_score
-
-
-  def shuffle(self):#try nodes in a different order to see if cost is lower
-    lowCost = self.get_cost()
-    shuffleable = self.nodes[1:len(self.nodes) -1]
     
-    cnt = 0
-    while cnt < self.SHUFFLE_TIMES:
-      last = self.nodes[:]
-      random.shuffle(shuffleable)
-      self.nodes = [last[0]] + shuffleable + \
-                    [last[-1]]
-      self.cost = 0
-      cnt += 1
-      if self.get_cost() < lowCost:
-        lowCost = self.get_cost()
-        continue
-      else:
-        self.nodes = last
-        self.cost = 0
-        continue
-    
-    return
     
   def greatCircleDistance(self,c1,c2):#great circle distance in km
     c1 = [radians(c) for c in c1]
@@ -289,8 +264,8 @@ def greatCircleDistance(c1,c2):#great circle distance in km
 def main():
   l = Location.Locations()
   start = time.clock()
-  op = OrienteeringProblem(l,1,26,1600)
-  tour = op.computePath(150)
+  op = OrienteeringProblem(l,26,1,900)
+  tour = op.computePath(100)
   print tour
   for lid in [node.location_id for node in tour.nodes]: print l.placenameForLocation(lid)
   print "Calcuated in %f seconds." % (time.clock() - start)
