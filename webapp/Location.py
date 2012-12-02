@@ -1,5 +1,5 @@
 """
-Location.py: Class representation of a location from DATABASE
+Location.py: Class representation of a location from database
 Mark Lubin
 """
 

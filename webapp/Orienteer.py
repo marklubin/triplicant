@@ -3,16 +3,22 @@ Orienteer.py: classes for computing a appromiate solution to the orienteering pr
 Mark Lubin
 """
 
-POPULATION_SIZE = 50
+
 RADIUS = 6368 #radius of earth in kilometers
 
-import Location,random
+import Location,random,time
 from math import acos,sin,cos,radians,ceil
-import time
+
 
 class OrienteeringProblem:
   
   def __init__(self,locations,start,end,max_cost):#the problem itself
+    self.POPULATION_SIZE = 100
+    self.CROSSOVER_PROB = .95
+    self.MUTATION_PROB = .85
+    self.CLOSEST_NODE_PROB = .5
+    
+    
     self.locations = locations
     self.start = start
     self.end = end
@@ -24,26 +30,95 @@ class OrienteeringProblem:
     
   def computePath(self,iterations):
     self.iterations = iterations
-    self.population = self.seed_population(POPULATION_SIZE)
+    self.population = self.seed_population(self.POPULATION_SIZE)
     cnt = 0
     while cnt < iterations: 
+      #print cnt
       cnt += 1
-      self.population.sort(reverse = True)
+      self.population.sort(reverse = True)#get the top one
       self.queen = self.population[0]
-      self.mates = self.cull()
-      self.population = self.mutate(self.mates)
+      mates = self.cull()#only keep the top half
+      self.population = self.nextGeneration(mates)#generate the next gen
     return self.queen
     
   def cull(self):
     #for now just keep the top half, to be changed to a better method later
-    return self.population[1:int(ceil(POPULATION_SIZE/2.0))]
+    return self.population[1:int(ceil(self.POPULATION_SIZE/2.0))]
     
-  def mutate(self,mates):#mate with the queen to create a new generation
-    pass
+  def nextGeneration(self,mates):#probablitistically mate with queen
+    #print "Creating next generation"
+    newPop = []
+    newPop.append(self.queen)#always keep the queen
+    queens_genes = self.getGenes(self.queen)
+    for mate in mates:
+      if random.random() < self.CROSSOVER_PROB:#TODO make more fit mates have better chance
+        newPop += self.spawn(queens_genes,self.getGenes(mate))#returns two spawns
+      else:
+        newPop.append(mate) #otherwise this guy makes it to the next gen
+    return newPop
+        
+  def spawn(self,A,B):
+    # print "Spawning"
+    spawn = []
+    i = 0
 
+
+    while i in range (0,2):#doing this twice
+      spawn.append(Tour())
+      start = Node(self.start,0,self.locations.coordsForLocation(self.start))
+      spawn[i].append(start)
+      current = start
+      visited = [start.location_id]
+
+      #construct the spawn
+      while current.location_id != self.end:#beak 
+        canidates = []#the crossover matrix
+        if current.location_id in A.keys():#all possibles from A
+          canidates += A[current.location_id]
+        if current.location_id in B.keys():#from B
+          canidates += B[current.location_id]
+        possibles = [c for c in canidates if c.location_id not in visited]#we don't allow duplicate visits
+        if not possibles: #this is a bad canidate, has a cycle, so dismiss it
+          spawn[i] = []
+          break
+        next = current.findClosest(possibles)#find the closet amongst possibles
+        if random.random() < self.CLOSEST_NODE_PROB:#sometimes choose randomly
+          next = random.choice(possibles)  
+        spawn[i].append(next)
+        visited.append(next.location_id)
+        current = next
+
+      if not spawn[i]:#if this was a dud canidate continue
+        i = i +1
+        break 
+
+      #sometimes inject a random node into the spawn  
+      if random.random() < self.MUTATION_PROB:#with some probablity insert a random node in the path at a random pos
+        mutants = [lid for lid in self.locations.asIds() \
+                    if lid not in [n.location_id for n in spawn[i].nodes]]
+        mutant = random.choice(mutants)
+        index = random.choice(range(1,len(spawn[i].nodes)))
+        mNode = Node(mutant,self.locations.importanceForLocation(mutant),
+        self.locations.coordsForLocation(mutant))
+        spawn[i].insert(index,mNode)
+      spawn[i] = self.make_feasible(spawn[i])
+      i += 1
+
+    return [s for s in spawn if s]#return valid spawns
       
+  def getGenes(self,tour):#return the genes for a tour
+    #each row has the adjacent nodes in the tour to node i 
+    genes = {}
+    start = tour.nodes[0]
+    end = tour.nodes[len(tour.nodes) -1]
+    genes[start.location_id] = [tour.next(start.location_id)]
+    genes[end.location_id] = [tour.prev(end.location_id)]
+    for node in tour.nodes[1:len(tour.nodes)-1]:
+      genes[node.location_id] = [tour.prev(node.location_id),tour.next(node.location_id)]
+    return genes
+  
     
-  def seed_population(self,size):
+  def seed_population(self,size):#construct the seed population
     population = []
     while len(population) < size:
       population.append(self.construct_random_tour())
@@ -60,7 +135,7 @@ class OrienteeringProblem:
     t.append(Node(self.end,0,self.locations.coordsForLocation(self.end)))
     return  self.make_feasible(t)
     
-  def make_feasible(self,t):
+  def make_feasible(self,t):#remove a random node until the tour has an acceptable cost
     nodes = t.getRemoveable()
     while t.get_cost() > self.max_cost and nodes:
       toDelete = random.choice(nodes)
@@ -69,7 +144,7 @@ class OrienteeringProblem:
     return t
       
       
-class Tour:#a genetic "chromeosome", a path connecting start and end
+class Tour:#a genetic "chromosome", a path connecting start and end
   def __init__(self):
     self.nodes = []
     self.total_score = 0
@@ -78,18 +153,27 @@ class Tour:#a genetic "chromeosome", a path connecting start and end
   def append(self,node):
     self.nodes.append(node)
     
-  def next(self,node):
-    return self.nodes.index(node) + 1
+  def insert(self,index,node):
+    self.nodes.insert(index,node)
+    self.cost = 0
+    self.get_cost()
+    self.total_score += node.score
     
-  def prev(self,node):
-    return self.nodes.index(node) - 1
+  def next(self,location_id):
+    node_index = self.indexForLocationId(location_id)
+    return self.nodes[node_index + 1]
+    
+  def prev(self,location_id):
+    node_index = self.indexForLocationId(location_id)
+    return self.nodes[node_index - 1]
   
-  def getRemoveable(self):
+  def getRemoveable(self):#everything but start and end
     return [node.location_id for node in self.nodes[1:len(self.nodes)-1]]
     
   def indexForLocationId(self,location_id):
     for n in self.nodes:
       if n.location_id == location_id: return self.nodes.index(n)
+      
     
   def removeNodeWithLocationId(self,location_id):
     i= self.indexForLocationId(location_id)
@@ -134,7 +218,7 @@ class Tour:#a genetic "chromeosome", a path connecting start and end
   def __getitem__(self,index):
     return self.nodes[index]
     
-  def __cmp__(self,other):
+  def __cmp__(self,other):#make sortable
     if self.get_total_score() < other.get_total_score(): return -1
     elif self.get_total_score() == other.get_total_score(): return 0
     elif self.get_total_score() > other.get_total_score(): return 1
@@ -154,12 +238,33 @@ class Node:#a node in the graph
       self.score = score
       self.coords = coords
       
+    def findClosest(self,nodes):
+      distance = 99999
+      best = None
+      for node in nodes:
+        gcd = greatCircleDistance(self.coords,node.coords)
+        if gcd < distance:
+          distance = gcd
+          best = node
+      return best
+        
+    
       
+
+def greatCircleDistance(c1,c2):#great circle distance in km
+  c1 = [radians(c) for c in c1]
+  c2 = [radians(c) for c in c2]
+  dLong = abs(c1[1] - c2[1]) #difference in longitude
+
+  dAngle = acos(sin(c1[0]) * sin(c2[0])
+                      + cos(c1[0]) * cos(c2[0]) * cos(dLong))      
 def main():
   l = Location.Locations()
   start = time.clock()
-  op = OrienteeringProblem(l,0,100,4000)
-  print op.computePath(1)
+  op = OrienteeringProblem(l,26,1,900)
+  tour = op.computePath(100)
+  print tour
+  for lid in [node.location_id for node in tour.nodes]: print l.placenameForLocation(lid)
   print "Calcuated in %f seconds." % (time.clock() - start)
 
   
