@@ -1,42 +1,43 @@
 
-import httplib,json,time
-BASE_URL = "maps.googleapis.com"
-class Geocoder:
+import httplib,json,time,secret
+
+TIMEOUT = 5
+BASE_URL = "api.geonames.org"
+
+class PyGeoNames:
     def reverse(self,latlong):
-        timeout = 5
-        conn = httplib.HTTPConnection(BASE_URL)
-        rstring = "/maps/api/geocode/json?latlng=%f,%f&sensor=true" % latlong
-        conn.request("GET",rstring)
-        r = conn.getresponse()
-        j = json.loads(r.read())
-        #import pdb; pdb.set_trace()
-        cnt = 0
-        while cnt < timeout:
-            cnt += 1
-            if not j['results']:
-                time.sleep(1)
+        tries = 0
+        while tries < TIMEOUT:
+            conn = httplib.HTTPConnection(BASE_URL)
+            rstring = "/findNearbyPlaceNameJSON?lat=%f&lng=%f&username=%s" % (latlong[0],latlong[1],secret.UNAME)
+            conn.request("GET",rstring)
+            r = conn.getresponse()
+            j = json.loads(r.read())
+            if 'geonames' not in j.keys():
+                tries += 1
                 continue
-            for result in j['results']:
-                if 'locality' in result['types']:
-                    return result['formatted_address']
-                elif 'route' in result['types'] or 'street_address' in result['types']:
-                    comps = result['formatted_address'].split(',')[1:]
-                    if len(comps) > 1:
-                        placename = []
-                        for comp in comps:
-                            words = comp.split(' ')
-                            newcomp = []
-                            for word in words:
-                                if word and not word.isdigit():#strip digits
-                                    newcomp.append(word.strip(', '))
-                                    placename.append(' '.join(newcomp))
-                                    return ','.join(placename)
-                                else: return result['formatted_address']
-                elif 'sublocality' in result['types']:
-                    return "JAPAN: ",result['formatted_address']
-        return str(latlong) #otherwise just return back latlong
+
+            results = j['geonames'][0]
+
+            return "%s,%s" % (results['name'],results['countryName'])
+
+        return "NO PLACE_NAME FOUND"
+
+    def timezone(self,latlong):
+         tries = 0
+         while tries < TIMEOUT:
+            conn = httplib.HTTPConnection(BASE_URL)
+            rstring = "/timezoneJSON?lat=%f&lng=%f&username=%s" % (latlong[0],latlong[1],secret.UNAME)
+            conn.request("GET",rstring)
+            r = conn.getresponse()
+            j = json.loads(r.read())
+            if 'timezoneId' not in j.keys():
+                tries += 1
+                continue
+            return j['timezoneId']
+         return "NO TIMEZONE FOUND"
 
 
 if __name__ == '__main__':
-    g = Geocoder()
-    print g.reverse((-9.41657248543689, 159.91543592233))
+    g = PyGeoNames()
+    print g.timezone((42.3792686552198,-71.0818139711539))

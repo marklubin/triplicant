@@ -34,6 +34,7 @@ class FlickrExtractor:
                     latitude FLOAT,\
                     longitude FLOAT,\
                     placename VARCHAR(100),\
+                    timezone VARCHAR(100),\
                     importance FLOAT);")
 
         cr.execute("CREATE TABLE locationsPhotos(\
@@ -99,13 +100,14 @@ class FlickrExtractor:
                    flickr_id VARCHAR(50),\
                    journey  VARCHAR(1000));")
        #rebuilt probablities
-       cr.execute("DROP TABLE IF EXISTS probablities")
+       cr.execute("DROP TABLE IF EXISTS edges")
 
-       cr.execute("CREATE TABLE probablities(\
+       cr.execute("CREATE TABLE edges(\
                    prob_id SERIAL PRIMARY KEY,\
                    source_id INTEGER,\
                    dest_id   INTEGER,\
                    prob FLOAT,\
+                   travel_time FLOAT,\
                    num INTEGER);")#stores N(l_i|l_j)
       #get locations and total photos
        cr.execute("SELECT location_id from LOCATIONS")
@@ -119,15 +121,15 @@ class FlickrExtractor:
            T[loc_id[0]] = 0
            locations.append(loc_id[0])
 
-       print "Initalizing Probablities"
+       print "Initalizing Probablities and travel times"
        #build entry to probablities table
        N = {} #N[source][destination] = number of times we go from source to dest
+       D = {} #D[source][destination] = a list with all the travel times between source and destination
        for source in locations:
            N[source] = {}
            for destination in locations:
                N[source][destination] = 0.
-               cr.execute("INSERT INTO probablities(source_id, dest_id,prob,num)\
-                           VALUES (%s,%s,%s,%s)",(source,destination,0.0,0))
+
 
 
        #get all the owners
@@ -139,7 +141,7 @@ class FlickrExtractor:
        dCnt = 0
        for owner in cr.fetchall():
            ownerCnt += 1
-           if not ownerCnt % 50: print ownerCnt
+           if not ownerCnt % 200: print ownerCnt
            #get all this owners photos order by date
            cr.execute("SELECT photos.photo_id,photos.datetime,\
                        locationsPhotos.location_id FROM photos,\
@@ -161,37 +163,39 @@ class FlickrExtractor:
 
            cr.execute("INSERT INTO owners(flickr_id,journey) VALUES (%s,%s);",(owner[0],json.dumps(trip)))
 
-
+       #import pdb; pdb.set_trace()
        #TODO maybe normalize probablites to remove people who never leave their current location
        print "Recording probablities"
        for source in N:
            for destination in N[source]:
                if N[source][destination] != 0:
-                            cr.execute("UPDATE probablities\
-                                        SET prob = (%s), num = (%s)\
-                                        WHERE source_id = (%s) AND dest_id = (%s);",
-                                        (N[source][destination]/float(T[source]),N[source][destination],source,destination))
+                           p = N[source][destination]/float(T[source])
+                           cr.execute("INSERT INTO edges(source_id, dest_id,prob,num)\
+                           VALUES (%s,%s,%s,%s)",(source,destination,p,T[source]))
 
        cn.commit()
        cn.close()
 
        """Get location names using reverse geocoder API"""
-    def getLocationNames(self):
+    def getLocationNamesAndTimeZones(self):
         import Geocoder
         cn = psycopg2.connect(secret.DB_CONNECT);
         cr = cn.cursor()
-        g = Geocoder.Geocoder()
+        g = Geocoder.PyGeoNames()
 
         cr.execute("SELECT latitude,longitude,location_id FROM locations")
 
         for latlong in cr.fetchall():
             placename = g.reverse(latlong[0:2])
-            print placename,latlong[2]
+            timezone = g.timezone(latlong[0:2])
+            print placename,timezone
             if len(placename) > 100: placename = placename[0:99]
             cr.execute("UPDATE locations\
-                        SET placename = (%s)\
+                        SET placename = (%s),\
+                        timezone = (%s)\
                         WHERE location_id = (%s);",\
-                        (placename,latlong[2]))
+                        (placename,timezone,latlong[2]))
+
         cn.commit()
         cn.close()
 
@@ -216,7 +220,7 @@ class FlickrExtractor:
 
         print "Retrieving probablities."
 
-        cr.execute("SELECT source_id, dest_id,prob FROM probablities WHERE prob != 0.0")
+        cr.execute("SELECT source_id, dest_id,prob FROM edges")
 
         for s,d,p in cr.fetchall():
             P[s][d] = p
@@ -225,8 +229,9 @@ class FlickrExtractor:
 
         I = R.copy() #intialize importance vector
 
-        iterCnt = 0
         delta = 9999
+
+        #value iteration algorithm
         while delta > .0001:
             I1 = {}#new vector to work with
             for location in I.keys():
@@ -235,7 +240,6 @@ class FlickrExtractor:
                 for edge in P[location].keys():#sum over all places we could go next
                     I1[location] += I[edge] * P[location][edge]
             delta = I1[0] - I[0]
-            iterCnt += 1
             I = I1.copy()
 
         print "Recording computed importances to database."
@@ -255,11 +259,11 @@ class FlickrExtractor:
 if __name__ == '__main__':
     #main routine for data processing and visualization
     flickr = FlickrExtractor()
-    #dv = DataVisualizer.DataVisualizer()
-    #flickr.locationMake(1,160)
+    dv = DataVisualizer.DataVisualizer()
+    #flickr.locationMake(1.3,185)
     #dv.mapMake(300,"locations",10)
-    flickr.getLocationNames()
-    #flickr.computeOwnerJourneys()
-    #flickr.solve()
+    flickr.getLocationNamesAndTimeZones()
+    flickr.computeOwnerJourneys()
+    flickr.solve()
     #dv.mapMake(300,"photos",.1)
     #dv.ownerTripsMapMake(300,'trips',.01)
