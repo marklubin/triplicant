@@ -5,6 +5,7 @@ Mark Lubin
 
 import psycopg2
 import secret
+from Orienteer import greatCircleDistance
 
 class Locations:#collection of Location
     def __init__(self):
@@ -27,14 +28,14 @@ class Locations:#collection of Location
 
 
     def getLocations(self):
-        locs = {}#dictionary of location information
+        locs = []#dictionary of location information
         for loc in self.locations:
             latlong = self.locations[loc].getLatLong()
             name = self.locations[loc].getPlacename()
-            locs[loc] = {"id"       : loc,
+            locs.append({"id"       : loc,
                          "latitude" : latlong[0],
                          "longitude": latlong[1],
-                         "name"     : name}
+                         "name"     : name})
         return locs
 
 
@@ -48,18 +49,21 @@ class Locations:#collection of Location
 
     def placenameForLocation(self,lid):
         if not lid in self.locations.keys():
-            raise LocatiionError("No location for ID: %d" % lid)
+            raise LocationError("No location for ID: %d" % lid)
         return self.locations[lid].getPlacename()
 
     def coordsForLocation(self,lid):
         if not lid in self.locations.keys():
-            raise LocatiionError("No location for ID: %d" % lid)
+            raise LocationError("No location for ID: %d" % lid)
         return self.locations[lid].getLatLong()
 
     def importanceForLocation(self,lid):
         if not lid in self.locations.keys():
-            raise LocatiionError("No location for ID: %d" % lid)
+            raise LocationError("No location for ID: %d" % lid)
         return self.locations[lid].getImportance()
+
+    def gcdForLocations(self,lid1,lid2):#distance between two locations
+        return greatCircleDistance(self.coordsForLocation(lid1),self.coordsForLocation(lid2))
 
 
 

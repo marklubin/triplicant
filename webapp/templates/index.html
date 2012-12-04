@@ -1,28 +1,37 @@
-<!doctype html>
-<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=true"></script>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+    <script type=text/javascript>
+  		$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+	</script>
+    <script type="text/javascript"
+  	src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAfCaJT8lRr65XelN33k9yxlW9ubTB-y4c&sensor=true">
+	</script>
+	<script type=text/javascript src="{{
+  	url_for('static', filename='jquery.js') }}"></script>
+  	<script type=text/javascript src="{{
+  	url_for('static', filename='triplicant.js') }}"></script>
+    <script type="text/javascript">
 
-<script type=text/javascript 
-  src="{{url_for('static', filename='jquery.js') }}">
-    $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
-</script>
+     
+    </script>
+  </head>
+  <body>
+    <div id="map_canvas" style="width:100%; height:75%"></div>
+    <div id ="input">
+    	Starting Location: <div id="start"></div>
+    	Ending Location: <div id="end"></div>
+    	<button type="button" id="clear">Clear</button>
+    	<button type="button" id="route">Get Route</button>
+    </div>
 
-<script type=text/javascript src="{{
-url_for('static', filename='triplicant.js') }}">
-</script>
 
 
-
-<title>Have a nice trip with Triplicant</title>
-
-<div id = "Header">
-  <h1>Triplicant - data mined travel route recommender</h1>
-</div>
-
-<div id= "map_canvas" style = "width:75%; height:50%"></div>
-
-<div id ="entry">
-  <form method="POST"  action="{{url_for('trip')}}">
-    From: <input type=text name=start />
-    To: <input type =text name=end />
-    <a href=# >Route my trip</a>
-  </form>
+  </body>
+</html>

@@ -238,6 +238,7 @@ class Tour:#a genetic "chromosome", a path connecting start and end
     #print self._locations.importanceForLocation(l2)
     d = RADIUS * dAngle
     #print "DISTANCE in KM: %f" % d
+
     return d
     
   def __setitem__(self,index,value):
@@ -285,7 +286,12 @@ def greatCircleDistance(c1,c2):#great circle distance in km
   dLong = abs(c1[1] - c2[1]) #difference in longitude
 
   dAngle = acos(sin(c1[0]) * sin(c2[0])
-                      + cos(c1[0]) * cos(c2[0]) * cos(dLong))      
+                      + cos(c1[0]) * cos(c2[0]) * cos(dLong))
+
+  d = RADIUS * dAngle
+  return d
+
+
 def main():
   l = Location.Locations()
   start = time.clock()
