@@ -260,7 +260,8 @@ if __name__ == '__main__':
     #main routine for data processing and visualization
     flickr = FlickrExtractor()
     dv = DataVisualizer.DataVisualizer()
-    #flickr.locationMake(1.3,185)
+    #flickr.locationMake(1.3,185)#first try
+    #flickr.locationMake(.8,85)
     #dv.mapMake(300,"locations",10)
     flickr.getLocationNamesAndTimeZones()
     flickr.computeOwnerJourneys()

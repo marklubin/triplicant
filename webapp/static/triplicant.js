@@ -1,6 +1,6 @@
 /*
 *triplicant.js
-*jquery functions used in triplicant web app
+*javascript used in triplicant web app
 *Mark Lubin
 */
 
@@ -13,15 +13,22 @@ var markers = Array();
 var locations = Array();
 var start = '';
 var end = '';
-var inputMode = START
+var inputMode = null;
 var tripPath;
 var mapLine;
+var spinner = null;
+var cost = '';
+var score = '';
 
 function initialize() {
+    $('#detour_slider').slider({
+      min: 0,
+      max: 10
+    });
     $('#clear').bind('click',function(){
         $('#start').html('');
         $('#end').html('');
-        inputMode = START;
+        inputMode = null;
         start = '';
         end = '';
         tripPath = null;
@@ -31,6 +38,8 @@ function initialize() {
         }
 
     });
+    $('#start').bind('click',startClicked);
+    $('#end').bind('click',endClicked);
     $('#route').bind('click',getRoute);
     mapOptions = {
       center: new google.maps.LatLng(20,0),
@@ -74,21 +83,32 @@ function getRoute(){
     mapLine.setMap(null);
     mapLine = null;
   }
+  startSpinner();
+  var value = $( "#detour_slider" ).slider( "option", "value" )/10.0;
   tripPath = Array()
   $.getJSON($SCRIPT_ROOT + "_getRoute",{
     start_id : start,
     end_id : end,
-    detour : DEFAULT_DETOUR
+    detour : value
   }, function(data){
-    $.each(data,function(){
+    score = data['score'];
+    cost = data['cost'];
+    $.each(data['path'],function(){
       latLng = new google.maps.LatLng(this[0],this[1])
       tripPath.push(latLng);
     });
+  if(spinner != null){//remove the spinner
+    spinner.stop();
+    spinner = null;
+  }
   displayPath();
   });
 }
 
 function displayPath(){
+  $('#score').html(score);
+  $('#cost').html(cost);
+
   mapLine = new google.maps.Polyline({
     path: tripPath,
     strokeColor: "#0000FF",
@@ -102,14 +122,48 @@ function markerClicked(marker_id){
   if(inputMode == START){
     $('#start').html(locations[marker_id]);
     start = marker_id
-    inputMode = END
   }
-  else{
+  else if(inputMode == END){
     $('#end').html(locations[marker_id]);
     end = marker_id
   }
   
+}
 
+function startClicked(){
+  inputMode = START;
+  $('#start').addClass('loc_selected');
+  $('#end').removeClass('loc_selected');
+
+}
+
+function endClicked(){
+  inputMode = END;
+  $('#end').addClass('loc_selected');
+  $('#start').removeClass('loc_selected');
+
+}
+
+function startSpinner(){
+  var opts = {
+  lines: 13, // The number of lines to draw
+  length: 30, // The length of each line
+  width: 19, // The line thickness
+  radius: 40, // The radius of the inner circle
+  corners: 1, // Corner roundness (0..1)
+  rotate: 45, // The rotation offset
+  color: '#000', // #rgb or #rrggbb
+  speed: 1.6, // Rounds per second
+  trail: 62, // Afterglow percentage
+  shadow: true, // Whether to render a shadow
+  hwaccel: false, // Whether to use hardware acceleration
+  className: 'spinner', // The CSS class to assign to the spinner
+  zIndex: 2e9, // The z-index (defaults to 2000000000)
+  top: 'auto', // Top position relative to parent in px
+  left: 'auto' // Left position relative to parent in px
+  };
+  var target = document.getElementById('map_canvas');
+  spinner = new Spinner(opts).spin(target);
 }
 
 $(document).ready(function(){

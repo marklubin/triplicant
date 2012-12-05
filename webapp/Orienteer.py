@@ -6,16 +6,16 @@ Mark Lubin
 
 RADIUS = 6368 #radius of earth in kilometers
 
-import Location,random,time
+import Location,random,time,walkerRandom
 from math import acos,sin,cos,radians,ceil
 
 
 class OrienteeringProblem:
   
   def __init__(self,locations,start,end,max_cost):#the problem itself
-    self.POPULATION_SIZE = 50 
+    self.POPULATION_SIZE = 30
     self.CROSSOVER_PROB = .95
-    self.MUTATION_PROB = .8
+    self.MUTATION_PROB = .95
     self.CLOSEST_NODE_PROB = .5
     
     
@@ -28,10 +28,20 @@ class OrienteeringProblem:
     self.vertices.remove(end)
     self.queen = None
     
+    probablities = {}
+
+    for vertex in self.vertices:#create a weighted probablity distrobution for mutations
+      probablities[vertex] = self.locations.importanceForLocation(vertex)
+
+    self.distribution = walkerRandom.Walkerrandom(probablities.values(),probablities.keys())
+    
   def computePath(self,iterations):
     self.iterations = iterations
     self.population = self.seed_population(self.POPULATION_SIZE)
     cnt = 0
+    if not iterations:#for comparision, do nothing but return the best random
+      self.population.sort(reverse = True)
+      return self.population[0]
     while cnt < iterations: 
       #print cnt
       cnt += 1
@@ -44,8 +54,7 @@ class OrienteeringProblem:
     return self.queen
     
   def cull(self):
-    #for now just keep the top half, to be changed to a better method later
-    return self.population[1:int(ceil(self.POPULATION_SIZE/2.0))]
+    return self.population[1:int(ceil(self.POPULATION_SIZE/1.75))]
     
   def nextGeneration(self,mates):#probablitistically mate with queen
     #print "Creating next generation"
@@ -97,9 +106,14 @@ class OrienteeringProblem:
 
       #sometimes inject a random node into the spawn  
       if random.random() < self.MUTATION_PROB:#with some probablity insert a random node in the path at a random pos
-        mutants = [lid for lid in self.locations.asIds() \
+        allowed = [lid for lid in self.locations.asIds() \
                     if lid not in [n.location_id for n in spawn[i].nodes]]
-        mutant = random.choice(mutants)
+        mutant = None #get a mutant from the weighted distobution
+
+        while True:
+          mutant = self.distribution.random()
+          if mutant in allowed: break
+
         index = random.choice(range(1,len(spawn[i].nodes)))
         mNode = Node(mutant,self.locations.importanceForLocation(mutant),
         self.locations.coordsForLocation(mutant))
@@ -133,8 +147,8 @@ class OrienteeringProblem:
     Node(self.start,0,self.locations.coordsForLocation(self.start))
     t = Tour()
     t.append(Node(self.start,0,self.locations.coordsForLocation(self.start)))
-    random.shuffle(self.vertices)
-    for lid in self.vertices:
+    possibles = random.sample(self.vertices,len(self.vertices)/2)#for performance only look at half at a time
+    for lid in possibles:
       t.append(Node(lid,self.locations.importanceForLocation(lid),
       self.locations.coordsForLocation(lid)))
     t.append(Node(self.end,0,self.locations.coordsForLocation(self.end)))
