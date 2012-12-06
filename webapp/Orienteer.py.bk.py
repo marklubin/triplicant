@@ -13,7 +13,7 @@ from math import acos,sin,cos,radians,ceil
 class OrienteeringProblem:
   
   def __init__(self,locations,start,end,max_cost):#the problem itself
-    self.POPULATION_SIZE = 30
+    self.POPULATION_SIZE = 40
     self.CROSSOVER_PROB = .95
     self.MUTATION_PROB = .95
     self.CLOSEST_NODE_PROB = .5
@@ -30,14 +30,8 @@ class OrienteeringProblem:
     
     probablities = {}
 
-    
-    #only allow nodes which are even reachable
-    self.possibles  = [vertex for vertex in self.vertices \
-                      if greatCircleDistance(self.locations.coordsForLocation(self.start),\
-                        self.locations.coordsForLocation(vertex)) < self.max_cost]
-    
-    for possible in self.possibles:#create a weighted probablity distrobution for mutations
-      probablities[possible] = self.locations.importanceForLocation(vertex)
+    for vertex in self.vertices:#create a weighted probablity distrobution for mutations
+      probablities[vertex] = self.locations.importanceForLocation(vertex)
 
     self.distribution = walkerRandom.Walkerrandom(probablities.values(),probablities.keys())
     
@@ -153,9 +147,8 @@ class OrienteeringProblem:
     Node(self.start,0,self.locations.coordsForLocation(self.start))
     t = Tour()
     t.append(Node(self.start,0,self.locations.coordsForLocation(self.start)))
-    #possibles = random.sample(self.vertices,len(self.vertices)/2)#for performance only look at half at a time
-    random.shuffle(self.possibles)
-    for lid in self.possibles:
+    possibles = random.sample(self.vertices,len(self.vertices)/2)#for performance only look at half at a time
+    for lid in possibles:
       t.append(Node(lid,self.locations.importanceForLocation(lid),
       self.locations.coordsForLocation(lid)))
     t.append(Node(self.end,0,self.locations.coordsForLocation(self.end)))
@@ -205,9 +198,9 @@ class Tour:#a genetic "chromosome", a path connecting start and end
   def removeNodeWithLocationId(self,location_id):
     i= self.indexForLocationId(location_id)
     if self.cost: 
-      self.cost -= greatCircleDistance(self.nodes[i].coords,self.nodes[i+1].coords)
-      self.cost -= greatCircleDistance(self.nodes[i-1].coords,self.nodes[i].coords)
-      self.cost += greatCircleDistance(self.nodes[i-1].coords,self.nodes[i+1].coords)
+      self.cost -= self.greatCircleDistance(self.nodes[i].coords,self.nodes[i+1].coords)
+      self.cost -= self.greatCircleDistance(self.nodes[i-1].coords,self.nodes[i].coords)
+      self.cost += self.greatCircleDistance(self.nodes[i-1].coords,self.nodes[i+1].coords)
     if self.total_score: self.total_score -= self.nodes[i].score
     self.nodes.remove(self.nodes[i])
     return
@@ -216,7 +209,7 @@ class Tour:#a genetic "chromosome", a path connecting start and end
     if not self.cost:
      i = 0
      while i+1 in range(0,len(self.nodes)):
-       self.cost += greatCircleDistance(self.nodes[i].coords,self.nodes[i+1].coords)
+       self.cost += self.greatCircleDistance(self.nodes[i].coords,self.nodes[i+1].coords)
        i += 1
     return self.cost
     
@@ -247,6 +240,20 @@ class Tour:#a genetic "chromosome", a path connecting start and end
         continue
     
     return
+    
+  def greatCircleDistance(self,c1,c2):#great circle distance in km
+    c1 = [radians(c) for c in c1]
+    c2 = [radians(c) for c in c2]
+    dLong = abs(c1[1] - c2[1]) #difference in longitude
+
+    dAngle = acos(sin(c1[0]) * sin(c2[0])
+                           + cos(c1[0]) * cos(c2[0]) * cos(dLong))
+
+    #print self._locations.importanceForLocation(l2)
+    d = RADIUS * dAngle
+    #print "DISTANCE in KM: %f" % d
+
+    return d
     
   def __setitem__(self,index,value):
     self.nodes[index] = value
