@@ -234,11 +234,16 @@ class FlickrExtractor:
         #value iteration algorithm
         while delta > .0001:
             I1 = {}#new vector to work with
-            for location in I.keys():
+            for destination in I.keys():
                 #add in reward factor
-                I1[location] = R[location]
-                for edge in P[location].keys():#sum over all places we could go next
-                    I1[location] += I[edge] * P[location][edge]
+                I1[destination] = R[destination]
+                for origin in P[destination].keys():#sum over all places we could go next
+                
+                  try:
+                    I1[destination] += I[origin] * P[origin][destination]
+                  except KeyError:
+                    continue
+            
             delta = I1[0] - I[0]
             I = I1.copy()
 
@@ -259,12 +264,12 @@ class FlickrExtractor:
 if __name__ == '__main__':
     #main routine for data processing and visualization
     flickr = FlickrExtractor()
-    dv = DataVisualizer.DataVisualizer()
+    #dv = DataVisualizer.DataVisualizer()
     #flickr.locationMake(1.3,185)#first try
     #flickr.locationMake(.8,85)
     #dv.mapMake(300,"locations",10)
-    flickr.getLocationNamesAndTimeZones()
-    flickr.computeOwnerJourneys()
+    #flickr.getLocationNamesAndTimeZones()
+    #flickr.computeOwnerJourneys()
     flickr.solve()
     #dv.mapMake(300,"photos",.1)
     #dv.ownerTripsMapMake(300,'trips',.01)
