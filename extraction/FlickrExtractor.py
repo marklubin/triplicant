@@ -231,17 +231,17 @@ class FlickrExtractor:
 
         delta = 9999
 
+
         #value iteration algorithm
         while delta > .0001:
-            I1 = {}#new vector to work with
+            I1 = {}
             for destination in I.keys():
                 #add in reward factor
                 I1[destination] = R[destination]
-                for origin in P[destination].keys():#sum over all places we could go next
-                
+                for origin in P.keys():#sum over all places we could go next
                   try:
                     I1[destination] += I[origin] * P[origin][destination]
-                  except KeyError:
+                  except KeyError:#no probablity of going between these places
                     continue
             
             delta = I1[0] - I[0]

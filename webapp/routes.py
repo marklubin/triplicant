@@ -3,13 +3,13 @@ routes.py
 main entry point for web application
 Mark Lubin
 """
-DEBUG = True
-COMPUTE_TIME = 150
+DEBUG = False
+COMPUTE_TIME = 200
 
 from flask import Flask,url_for,render_template,request
 from Location import Locations
 from Orienteer import OrienteeringProblem,Tour,Node
-import json,time
+import json,time,os
 from math import sqrt
 
 maxDetour = lambda x: 40.0/sqrt(x) * x ;#special non-linear function for detour calculation
@@ -58,4 +58,5 @@ def getRoute():
 	
 
 if __name__ == '__main__':
-    app.run(debug = DEBUG)#start server
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)

@@ -36,7 +36,7 @@ class OrienteeringProblem:
                       if greatCircleDistance(self.locations.coordsForLocation(self.start),\
                         self.locations.coordsForLocation(vertex)) < self.max_cost]
     
-    for possible in self.possibles:#create a weighted probablity distrobution for mutations
+    for possible in self.possibles:#create a weighted probablity distribution for mutations
       probablities[possible] = self.locations.importanceForLocation(vertex)
 
     self.distribution = walkerRandom.Walkerrandom(probablities.values(),probablities.keys())
@@ -302,11 +302,26 @@ def greatCircleDistance(c1,c2):#great circle distance in km
 def main():
   l = Location.Locations()
   start = time.clock()
-  op = OrienteeringProblem(l,1,26,1600)
-  tour = op.computePath(150)
-  print tour
-  for lid in [node.location_id for node in tour.nodes]: print l.placenameForLocation(lid)
-  print "Calcuated in %f seconds." % (time.clock() - start)
+
+  for i in range(0,1000,100):
+    best = 0
+    score = []
+    for k in range(0,20):
+      op = OrienteeringProblem(l,16,64,8000)
+      tour = op.computePath(i)
+      score.append(tour.get_total_score())
+      if tour.get_total_score() > best: best = tour.get_total_score()
+    average = sum(score)/float(len(score))
+    print  "\n\t    Start: Tokyo\n\
+            End: Singapore\n\
+            PathCost Limit: 8000 km\n\
+            Inital Population Size: 50\n\
+            # Generations: %d\n\
+            Average Score after 20 trials: %f\n\
+            Score of Current Best Path Seen: %f\n" \
+          % (i, average,best)
+  
+  print "Calcuated in %.4f seconds." % (time.clock() - start)
 
   
 
