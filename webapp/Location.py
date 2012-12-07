@@ -4,15 +4,17 @@ Mark Lubin
 """
 
 import psycopg2
-import secret
+import os
 from Orienteer import greatCircleDistance
+
+DB_CONNECT = os.environ["DATABASE_URL"]
 
 class Locations:#collection of Location
     def __init__(self):
 
         #initalize a list of locations
         self.locations = {}
-        cn = psycopg2.connect(secret.DB_CONNECT)
+        cn = psycopg2.connect(DB_CONNECT)
         cr =  cn.cursor()
         cr.execute("SELECT location_id, latitude, longitude, placename, importance FROM Locations")
 
