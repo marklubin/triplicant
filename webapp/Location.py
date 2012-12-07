@@ -9,12 +9,19 @@ from Orienteer import greatCircleDistance
 
 DB_CONNECT = os.environ["DATABASE_URL"]
 
+
+UNAME = DB_CONNECT.split(':')[1][2:]
+PWD, HOST = DB_CONNECT.split(':')[2].split("@")
+HOST += ":5432"
+DBNAME = DB_CONNECT.split(':')[3].split("/")[1]
+
+
 class Locations:#collection of Location
     def __init__(self):
 
         #initalize a list of locations
         self.locations = {}
-        cn = psycopg2.connect(host = DB_CONNECT)
+        cn = psycopg2.connect(user = UNAME, password = PWD, host = HOST, dbname = DBNAME)
         cr =  cn.cursor()
         cr.execute("SELECT location_id, latitude, longitude, placename, importance FROM Locations")
 
