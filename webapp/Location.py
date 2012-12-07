@@ -12,7 +12,6 @@ DB_CONNECT = os.environ["DATABASE_URL"]
 
 UNAME = DB_CONNECT.split(':')[1][2:]
 PWD, HOST = DB_CONNECT.split(':')[2].split("@")
-HOST += ":5432"
 DBNAME = DB_CONNECT.split(':')[3].split("/")[1]
 
 
