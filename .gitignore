@@ -1,8 +1,5 @@
 venv
 *analysis*
-*jquery*
-*.txt
-*.png
 *secret.py*
 *DS_Store*
 *~
