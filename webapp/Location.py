@@ -14,7 +14,7 @@ class Locations:#collection of Location
 
         #initalize a list of locations
         self.locations = {}
-        cn = psycopg2.connect(DB_CONNECT)
+        cn = psycopg2.connect(host = DB_CONNECT)
         cr =  cn.cursor()
         cr.execute("SELECT location_id, latitude, longitude, placename, importance FROM Locations")
 
