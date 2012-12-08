@@ -36,13 +36,14 @@ def calculateRoute(start,end,detour):#set up the problem and calculate the route
 	if start_id == end_id: 
 		#if they map to same cluster go direct
 		results = {"score": 0, "cost": 0, "path":[start,end]}
-		return results
+		response = json.dumps(results)
+		return response
 
 
 	baseDistance = locations.gcdForLocations(start_id,end_id)
 
 	maxDist = baseDistance + detour * maxDetour(baseDistance)
-	
+
 	init = time.clock()
 	op = OrienteeringProblem(locations,start_id,end_id,maxDist)
 	
