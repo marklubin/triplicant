@@ -9,7 +9,7 @@ END = false;
 DEFAULT_DETOUR = 1.5;
 
 var map,mapOptions;
-var markers = Array();
+var markers;
 var locations = Array();
 var start = '';
 var end = '';
@@ -20,6 +20,9 @@ var spinner = null;
 var cost = '';
 var score = '';
 var startAC,endAC;
+var startLatLng,endLatLng;
+var geocoder;
+var bounds;
 
 function initialize() {
 //set up google places autocomplete for inputs
@@ -40,9 +43,8 @@ function initialize() {
 
     //set up buttons 
     $('#clear').bind('click',function(){
-        $('#start').html('');
-        $('#end').html('');
-        inputMode = null;
+        $('#start').value = '';
+        $('#end').value = '';
         start = '';
         end = '';
         tripPath = null;
@@ -50,11 +52,16 @@ function initialize() {
           mapLine.setMap(null);
           mapLine = null;
         }
+        clearMarkers();
 
     });
-    $('#start').bind('click',startClicked);
-    $('#end').bind('click',endClicked);
-    $('#route').bind('click',getRoute);
+    $('#route').bind('click',getStartLatLng);
+
+
+    //set up map and geocoder
+
+    geocoder = new google.maps.Geocoder();
+
     mapOptions = {
       center: new google.maps.LatLng(20,0),
       zoom: 2,
@@ -62,67 +69,68 @@ function initialize() {
     };
    	map = new google.maps.Map(document.getElementById("map_canvas"),
         mapOptions);
-   	$.getJSON($SCRIPT_ROOT + "/_init",function(data){
-   		$.each(data,function(index){
-        locations[this['id']] = this['name'];
-        latLng = new google.maps.LatLng(this['latitude'],
-                                        this['longitude']);
-        marker = createMarker(this)
-        markers.push(marker);
-   		});
-   	});
 };
+
+
 function createMarker(location){
-    latLng = new google.maps.LatLng(location['latitude'],
-                                        location['longitude']);
     var marker = new google.maps.Marker({       
-        position: latLng, 
+        position: location, 
         map: map,  // google.maps.Map 
         draggable: false,
-        clickable: true,
-        title: location['id'].toString()      
+        clickable: true   
     }); 
-    google.maps.event.addListener(marker, 'click', function() { 
-      markerClicked(marker.title); 
-    }); 
-    return marker;  
+   /* google.maps.event.addListener(marker, 'click', function() { 
+      markerClicked(marker.position); 
+    }); */
+    markers.push(marker)//add to array of markers
 }
 
+
 function getRoute(){
-  if(start == '' || end == ''){
-    alert("Please enter both a start and end point");
-    return;
-  }
   if(mapLine != null){
     mapLine.setMap(null);
     mapLine = null;
   }
-  startSpinner();
-  var value = $( "#detour_slider" ).slider( "option", "value" )/10.0;
-  tripPath = Array()
+
+  //clear markers and get a new set ready
+  clearMarkers();
+  markers = Array();
+
+  var value = $( "#detour_slider" ).slider( "option", "value" )/10.0;//get detour slider value
+  
+  tripPath = Array() //hold the new trip
+  bounds = new google.maps.LatLngBounds();//set up bounds
+
+  startSpinner();//ajax spinner
+
+  //make the ajax request
   $.getJSON($SCRIPT_ROOT + "_getRoute",{
-    start_id : start,
-    end_id : end,
+    start_lat : startLatLng.lat(),
+    start_lng : startLatLng.lng(),
+    end_lat : endLatLng.lat(),
+    end_lng : endLatLng.lng(),
     detour : value
-  }, function(data){
+  }, function(data){//callback to get response, stop spinner and show route
     score = data['score'];
     cost = data['cost'];
-    $.each(data['path'],function(){
-      latLng = new google.maps.LatLng(this[0],this[1])
-      tripPath.push(latLng);
+    $.each(data['path'],function(){//construct the path and set up markers
+      var latLng = new google.maps.LatLng(this[0],this[1])
+      createMarker(latLng);//set up a marker
+      tripPath.push(latLng);//map path 
+      bounds.extend(latLng);
     });
   if(spinner != null){//remove the spinner
     spinner.stop();
     spinner = null;
   }
-  displayPath();
+  displayPath();//actually display polyline
   });
 }
 
 function displayPath(){
   //swap in the information div
-  $('#get_started').hide()
-  $('#info').show()
+ // $('#get_started').hide()
+  //$('#info').show()
 
   //update stats
   $('#score').html(score);
@@ -135,6 +143,10 @@ function displayPath(){
     strokeOpacity: 1.0,
     map: map
   });
+
+  //set the bounds and pan
+  map.fitBounds(bounds);
+
 }
 
 function markerClicked(marker_id){
@@ -149,17 +161,53 @@ function markerClicked(marker_id){
   
 }
 
-function startClicked(){
-  inputMode = START;
-  $('#start').addClass('loc_selected');
-  $('#end').removeClass('loc_selected');
+function getStartLatLng(){
+  
+  //reset values 
+  startLatLng = 0;
+  endLatLng = 0;
+  
+  //get input values
+  var sname = $('#start').val();
+
+  //try start addr
+  geocoder.geocode({'address': sname },function(results,status){
+   if (status == google.maps.GeocoderStatus.OK) {
+      startLatLng = results[0].geometry.location;
+      getEndLatLng();
+    } else {
+      alert("Geocode was not successful for the following reason: " + status);
+    }
+  });
 
 }
 
-function endClicked(){
-  inputMode = END;
-  $('#end').addClass('loc_selected');
-  $('#start').removeClass('loc_selected');
+function getEndLatLng(){
+
+var ename = $('#end').val();
+
+ //try end addr and call getRoute on success
+  geocoder.geocode({'address': ename },function(results,status){
+   if (status == google.maps.GeocoderStatus.OK) {
+      endLatLng = results[0].geometry.location;
+      getRoute();
+    } else {
+      alert("Geocode was not successful for the following reason: " + status);
+    }
+  });
+}
+
+
+//remove all markers from map
+function clearMarkers(){
+  if(!markers){
+    return; //nothing to do
+  }
+  for (var i = 0; i < markers.length; i++ ) {
+    if(markers[i]){//no real marker
+      markers[i].setMap(null);
+    }
+  }
 
 }
 
