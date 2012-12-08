@@ -7,12 +7,18 @@ import psycopg2
 import os
 from Orienteer import greatCircleDistance
 
-DB_CONNECT = os.environ["DATABASE_URL"]
+UNAME = "postgres"
+PWD = ''
+HOST = "localhost"
+DBNAME = "triplicant"
 
+try:#for heroku
+    DB_CONNECT = os.environ["DATABASE_URL"]
+    UNAME = DB_CONNECT.split(':')[1][2:]
+    PWD, HOST = DB_CONNECT.split(':')[2].split("@")
+    DBNAME = DB_CONNECT.split(':')[3].split("/")[1]
+except KeyError: pass
 
-UNAME = DB_CONNECT.split(':')[1][2:]
-PWD, HOST = DB_CONNECT.split(':')[2].split("@")
-DBNAME = DB_CONNECT.split(':')[3].split("/")[1]
 
 
 class Locations:#collection of Location

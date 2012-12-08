@@ -1,0 +1,124 @@
+      html { 
+        height: 100% 
+      }
+      body {
+        width: 100%;
+        background-color: black;
+        height: 100%; 
+        margin: 0; 
+        padding: 0;
+        ont-family: sans-serif }
+
+
+      #tabs{
+        height: 98%;
+        background: #d6d6d6;
+      }
+      #content{
+        width: 100%;
+        min-width:1500px;
+        height: 100%; 
+        margin: 0; 
+        padding: 0;
+      }
+      
+      #main{
+        min-width: 800px;
+        width: 1000x;
+        height: 600px;
+        margin: 0px;
+        padding: 0px;
+        float:left;
+       }
+
+      .info_side{
+        width: 445px;
+        margin: 0px;
+        padding:0px;
+        background: #d6d6d6;
+        height: 550px;  
+        float:left;
+      }
+
+      #get_started{
+      }
+
+      #default_text{
+        margin-right:auto;
+        margin-left:40px;
+        margin-top:225px;
+        font-size: 18px;
+      }
+
+      #detour_slider {
+                margin: 20px;
+                width: 75%;
+              }
+      #map_canvas {
+                width: 650px;
+                height: 550px;
+              	margin: 0px;
+              	min-height: 100px;
+              	float: left;
+              }
+      #side {
+                height: 510px;
+              	min-width: 175px;
+              	padding: 20px;
+              	background-color: #d6d6d6;
+              	margin: 0px;
+              	float: left;
+              }
+      #title_bar {
+                height: 51px;
+                width : 100%;
+                background-color: black;
+              	font-style: italic;
+              	font-weight: bold;
+              	font-family: monospace;
+              	color: #ff2d10;
+              	padding: 0px;
+              	margin: 0px;
+              }
+      .loc {
+                width: 90%;
+              	height: 40px;
+              	background-color: #ffffff;
+                font-size:small;
+              	
+           } 
+     #controls{
+        width: 200px;
+	      margin-top: 10px;	
+	      height: 25%
+      }
+      .buttons{
+	      margin: 10px;
+      }
+    #min_detour{
+	      position: relative;
+	      top: -10px;
+	      left: 5px;
+      }
+     #max_detour{
+	      position: relative;
+	      top: -40px;
+	      left: 150px;
+      } 
+      .detour_value{
+	      font-size: small;
+	      color: gray;
+      }
+      .buttons{
+        margin-left:15px;
+        width: 150px;
+        height:25px;
+      }
+      .output{
+        margin: 10px;
+	      position: relative
+	      top: 100;
+	      background-color: #d6d6d6;
+	      width: 100%;
+	      height: 30px;
+      }

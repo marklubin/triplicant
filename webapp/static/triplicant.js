@@ -19,12 +19,26 @@ var mapLine;
 var spinner = null;
 var cost = '';
 var score = '';
+var startAC,endAC;
 
 function initialize() {
+//set up google places autocomplete for inputs
+    var autocompleteSettings = {
+      types: ['(cities)']
+    };
+
+    startAC = new google.maps.places.Autocomplete(document.getElementById('start'),autocompleteSettings);
+    endAC = new google.maps.places.Autocomplete(document.getElementById('end'),autocompleteSettings);
+
+    //set up tabs and according 
+    $('#tabs').tabs();
+    $('.accordion').accordion();
     $('#detour_slider').slider({
       min: 0,
       max: 10
     });
+
+    //set up buttons 
     $('#clear').bind('click',function(){
         $('#start').html('');
         $('#end').html('');
@@ -106,6 +120,11 @@ function getRoute(){
 }
 
 function displayPath(){
+  //swap in the information div
+  $('#get_started').hide()
+  $('#info').show()
+
+  //update stats
   $('#score').html(score);
   $('#cost').html(cost);
 
@@ -166,6 +185,4 @@ function startSpinner(){
   spinner = new Spinner(opts).spin(target);
 }
 
-$(document).ready(function(){
-	initialize();
-});
+$(document).ready(initialize);
