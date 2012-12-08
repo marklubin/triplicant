@@ -33,14 +33,16 @@ def calculateRoute(start,end,detour):#set up the problem and calculate the route
 	start_id = getClosestNode(start)#get id of nearest actual node
 	end_id = getClosestNode(end)#ditto
 
-	if start_id == end_id: return "ERROR"
+	if start_id == end_id: 
+		#if they map to same cluster go direct
+		results = {"score": 0, "cost": 0, "path":[start,end]}
+		return results
 
-	print start_id,end_id
 
 	baseDistance = locations.gcdForLocations(start_id,end_id)
 
 	maxDist = baseDistance + detour * maxDetour(baseDistance)
-	print baseDistance, maxDist
+	
 	init = time.clock()
 	op = OrienteeringProblem(locations,start_id,end_id,maxDist)
 	
