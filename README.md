@@ -61,3 +61,17 @@ Triplicant builds on some existing research in various fields of AI and combines
 * apply a GA to this instance of the orienteering problem
 * combine the above ideas to try to produce travel routes
 
+
+Future
+------------
+
+Right now Triplicant is somewhat limited by the data it has to work with. The location ranking algorithm currently only 
+works on about 150K photos from 3000 unique Flickr users to extract information. This data also has a strong bias to the
+UK for some reason. I believe that expanding the data set to "smooth" out the statistics would greatly improve the results
+of the ranking algorithm.
+
+I'm also looking forward to improving the app by using a better metric of travel time between locations than simply the 
+great circle distance. There are also plans to incorporate data from other API to recommend individual sites of interest
+near each destination along the trip.
+
+
