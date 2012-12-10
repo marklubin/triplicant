@@ -5,6 +5,10 @@ Overview
 -----------
 Triplicant attempts to recommend an optimal travel route given a start and end point and a "detour factor", which represents how much time/money/etc. you are willing to spend travelling between the ends points. It identifies popular locations and ranks them using photo metadata extracted from the Flickr API. Then it uses a genetic algorithm to approximate a solution to the "Orienteering" problem.
  
+Technology
+--------------
+This project is built primarily in Python using the Flask microframework for the web backend. I've used Postgres for the data store and jQuery for the fancy front end with the help of Google Maps API to make sense of it all.
+
 
 Behind the scenes
 --------------------
