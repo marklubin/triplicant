@@ -9,7 +9,9 @@ Triplicant attempts to recommend an optimal travel route given a start and end p
  
 Technology
 --------------
-This project is built primarily in Python using the Flask microframework for the web backend. I've used Postgres for the data store and jQuery for the fancy front end with the help of Google Maps API to make sense of it all.
+This project is built primarily in Python using the Flask microframework for the web backend.I've used Postgres for the
+data store and jQuery for the fancy front end with the help of Google Maps API to make sense of it all. It's currently 
+running on a single dyno on Heroku so unfortunately sometimes it takes awhile to wake up.
 
 
 Behind the scenes
