@@ -1,5 +1,7 @@
-TRIPLICANT - Travel discovery engine
+TRIPLICANT - Travel discovery engine 
 ========================================
+
+[demo](http://triplicant.heroku.com)
 
 Overview
 -----------
