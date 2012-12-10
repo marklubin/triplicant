@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Triplicant by marklubin</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Triplicant</h1>
+        <p></p>
+
+        <p class="view"><a href="https://github.com/marklubin/triplicant">View the Project on GitHub <small>marklubin/triplicant</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/marklubin/triplicant/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/marklubin/triplicant/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/marklubin/triplicant">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1><a href="http://triplicant.heroku.com">TRIPLICANT - Travel discovery engine</a></h1>
+
+<h2>Overview</h2>
+
+<p>Triplicant attempts to recommend an optimal travel route given a start and end point and a "detour factor", which represents how much time/money/etc. you are willing to spend travelling between the ends points. It identifies popular locations and ranks them using photo metadata extracted from the Flickr API. Then it uses a genetic algorithm to approximate a solution to the "Orienteering" problem.</p>
+
+<h2>Technology</h2>
+
+<p>This project is built primarily in Python using the Flask microframework for the web backend.I've used Postgres for the
+data store and jQuery for the fancy front end with the help of Google Maps API to make sense of it all. It's currently 
+running on a single dyno on Heroku so unfortunately sometimes it takes awhile to wake up.</p>
+
+<h2>Behind the scenes</h2>
+
+<p>Triplicant uses some interesting concepts from AI, such as:</p>
+
+<h3>Clustering</h3>
+
+<p>Uses a mean-shift clustering algorithm to identify about 600 clusters(locations) each with about a radius of 4 miles where many photos have been taken.</p>
+
+<h3>Graph centrality</h3>
+
+<p>The notion of centrality of a graph is a measure of a vertex's overall importance within the graph. Here I used probability of transit between two locations, after reducing a users photo history to an ordered sequence of locations they visited, combined with the total number of photos taken in a location to compute the centrality of each node in a way that is similar to the method of eigenvector centrality, in particularly the algorithm is highly influenced by Google PageRank. The set of equations for the importance of each vertex is then solved using a value iteration method.</p>
+
+<h3>Solving the orienteering problem via a GA</h3>
+
+<p>At first I had intend to use my importance values in a simple model of path cost and compute a A* graph search. However, quickly found that I was modeling problem incorrectly. After some research I found that the problem I was actually trying to solve is the point-to-point orienteering problem. My version of this problem is: </p>
+
+<p>Given:</p>
+
+<ul>
+<li>G = (V,E) is a fully connected undirected graph</li>
+<li>let each vertex have a "score" associated with it (importance in this case) eg. s: V -&gt; R</li>
+<li>let each edge have a path cost, in this problem I've simply used the great circle distance between the locations. d : E -&gt; R</li>
+<li>a hard upper limit on the acceptable path cost </li>
+<li>a start node and an end node</li>
+</ul><p>Find:</p>
+
+<ul>
+<li>the path from the start node to the end node that has the highest possible score of the paths with acceptable path costs, where the score of a path is the sum score of the nodes it visits</li>
+</ul><p>Or rather, find a path that connects the start and end and visits the most interesting destinations in-between given a travel budget.</p>
+
+<p>Unfortunately, as this problem is reducible to a variant of the Travelling Salesman Problem it is also NP-hard and the exact solution can't be computed for a worthwhile number of nodes in a reasonable time. Thus, I've used a "queen-bee" genetic algorithm to approximate a solution.  The algorithm can be described as follows:</p>
+
+<ol>
+<li>Generate a population of random paths between the start and end using all the other nodes</li>
+<li>remove nodes from random points along the paths until the path cost is acceptable</li>
+<li>rank the population by fitness, the fittest member of the population becomes "the queen", the top half of the rest have a chance to crossover with the queen</li>
+<li>for each remaining paths, with a certain probability generate a new path by probabilistically building it out the queen's and the path's components</li>
+<li>for each new path, "mutate" with a certain probability, that is to say insert a node taken from a probability distribution where the nodes are weighed by score and insert it at a random point along the path.</li>
+<li>remove nodes from random points until the path cost of the new path is acceptable</li>
+<li>permute each path to see if a different ordering would have a lower path cost</li>
+<li>repeat 3-7 for a given number of iterations(generations) and return the queen of the last generation</li>
+</ol><h2>Innovation</h2>
+
+<p>Triplicant builds on some existing research in various fields of AI and combines them in a novel way. As far as I know Triplicant is the first app of its kind to:</p>
+
+<ul>
+<li>apply clustering to identify locations from photo metadata on a global scale</li>
+<li>attempt to weight travel destinations by computing their centrality within a graph</li>
+<li>apply a GA to this instance of the orienteering problem</li>
+<li>combine the above ideas to try to produce travel routes</li>
+</ul><h2>Future</h2>
+
+<p>Right now Triplicant is somewhat limited by the data it has to work with. The location ranking algorithm currently only 
+works on about 150K photos from 3000 unique Flickr users to extract information. This data also has a strong bias to the
+UK for some reason. I believe that expanding the data set to "smooth" out the statistics would greatly improve the results
+of the ranking algorithm.</p>
+
+<p>I'm also looking forward to improving the app by using a better metric of travel time between locations than simply the 
+great circle distance. There are also plans to incorporate data from other API to recommend individual sites of interest
+near each destination along the trip.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/marklubin">marklubin</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
